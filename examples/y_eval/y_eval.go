@@ -33,8 +33,8 @@ func main() {
 	root, _ := yaks.NewPath("/")
 	w := y.Workspace(root)
 
-	fmt.Println("Get from " + s.ToString())
-	for _, pv := range w.Get(s) {
+	fmt.Println("Eval on " + s.ToString())
+	for _, pv := range w.Eval(s) {
 		fmt.Println("  " + pv.Path().ToString() + " : " + pv.Value().ToString())
 	}
 

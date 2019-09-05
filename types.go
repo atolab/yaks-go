@@ -18,6 +18,9 @@ type Listener func([]Change)
 // SubscriptionID identifies a Yaks subscription
 type SubscriptionID = zenoh.Subscriber
 
+// Eval defines the callback function that has to be registered for evals
+type Eval func(path *Path, props Properties) Value
+
 ////////////////
 //    Path    //
 ////////////////

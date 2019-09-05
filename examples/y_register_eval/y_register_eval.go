@@ -3,9 +3,20 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/atolab/yaks-go"
 )
+
+func eval(path *yaks.Path, props yaks.Properties) yaks.Value {
+	fmt.Println(props)
+	name := props["name"]
+	if name == "" {
+		name = "World"
+	}
+
+	return yaks.NewStringValue("Hello " + name + "!")
+}
 
 func main() {
 	locator := "tcp/127.0.0.1:7447"
@@ -13,12 +24,7 @@ func main() {
 		locator = os.Args[1]
 	}
 
-	selector := "/demo/**"
-	if len(os.Args) > 2 {
-		selector = os.Args[2]
-	}
-
-	s, err := yaks.NewSelector(selector)
+	p, err := yaks.NewPath("/demo/eval")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -33,10 +39,15 @@ func main() {
 	root, _ := yaks.NewPath("/")
 	w := y.Workspace(root)
 
-	fmt.Println("Get from " + s.ToString())
-	for _, pv := range w.Get(s) {
-		fmt.Println("  " + pv.Path().ToString() + " : " + pv.Value().ToString())
+	fmt.Println("Register eval " + p.ToString())
+	err = w.RegisterEval(p, eval)
+	if err != nil {
+		panic(err.Error())
 	}
+
+	time.Sleep(60 * time.Second)
+
+	w.UnregisterEval(p)
 
 	err = y.Logout()
 	if err != nil {
