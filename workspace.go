@@ -164,13 +164,17 @@ func (w *Workspace) RegisterEval(path *Path, eval Eval) error {
 		if err != nil {
 			fmt.Printf("ERROR: Registered eval on %s received query for an invalid selector: %s?%s\n", p.ToString(), rname, predicate)
 		}
-		v := eval(path, predicateToProperties(s.Properties()))
-		replies := make([]zenoh.Resource, 1)
-		replies[0].RName = path.ToString()
-		replies[0].Data = v.Encode()
-		replies[0].Encoding = v.Encoding()
-		replies[0].Kind = PUT
-		repliesSender.SendReplies(replies)
+
+		evalRoutine := func() {
+			v := eval(path, predicateToProperties(s.Properties()))
+			replies := make([]zenoh.Resource, 1)
+			replies[0].RName = path.ToString()
+			replies[0].Data = v.Encode()
+			replies[0].Encoding = v.Encoding()
+			replies[0].Kind = PUT
+			repliesSender.SendReplies(replies)
+		}
+		go evalRoutine()
 	}
 
 	s, err := w.zenoh.DeclareStorage(zenohEvalPrefix+p.ToString(), zListener, zQueryHandler)
