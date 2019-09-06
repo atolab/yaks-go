@@ -271,6 +271,7 @@ func RegisterValueDecoder(encoding Encoding, decoder ValueDecoder) error {
 func init() {
 	RegisterValueDecoder(RAW, rawDecoder)
 	RegisterValueDecoder(STRING, stringDecoder)
+	RegisterValueDecoder(PROPERTIES, propertiesDecoder)
 }
 
 ////////////////
@@ -351,4 +352,68 @@ func (v *StringValue) ToString() string {
 
 func stringDecoder(buf []byte) (Value, error) {
 	return &StringValue{string(buf)}, nil
+}
+
+//////////////////////////
+//   PROPERTIES Value   //
+//////////////////////////
+
+// PropertiesValue is a PROPERTIES value (i.e. a map[string]string)
+type PropertiesValue struct {
+	p Properties
+}
+
+// NewPropertiesValue returns a new PropertiesValue
+func NewPropertiesValue(p Properties) *PropertiesValue {
+	return &PropertiesValue{p}
+}
+
+// Encoding returns the encoding flag for a PropertiesValue
+func (v *PropertiesValue) Encoding() Encoding {
+	return PROPERTIES
+}
+
+// Encode returns the value encoded as a []byte
+func (v *PropertiesValue) Encode() []byte {
+	return []byte(v.ToString())
+}
+
+const (
+	propSep = ";"
+	kvSep   = "="
+)
+
+// ToString returns the value as a string
+func (v *PropertiesValue) ToString() string {
+	builder := new(strings.Builder)
+	i := 0
+	for key, val := range v.p {
+		builder.WriteString(key)
+		builder.WriteString(kvSep)
+		builder.WriteString(val)
+		i++
+		if i < len(v.p) {
+			builder.WriteString(propSep)
+		}
+	}
+	return builder.String()
+}
+
+func propertiesOfString(s string) Properties {
+	p := make(Properties)
+	if len(s) > 0 {
+		for _, kv := range strings.Split(s, propSep) {
+			i := strings.Index(kv, kvSep)
+			if i < 0 {
+				p[kv] = ""
+			} else {
+				p[kv[:i]] = kv[i+1:]
+			}
+		}
+	}
+	return p
+}
+
+func propertiesDecoder(buf []byte) (Value, error) {
+	return &PropertiesValue{propertiesOfString(string(buf))}, nil
 }

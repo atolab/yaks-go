@@ -9,6 +9,7 @@ import (
 type Yaks struct {
 	zenoh  *zenoh.Zenoh
 	yaksid string
+	admin  *Admin
 }
 
 // YError reports an error that occured in Yaks, possibly caused by an error in Zenoh.
@@ -30,7 +31,9 @@ func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 	if !ok {
 		return nil, &YError{"Failed to retrieve YaksId from Zenoh info", nil}
 	}
-	return &Yaks{z, yaksid}, nil
+	adminPath, _ := NewPath("/@")
+	adminWS := &Workspace{adminPath, z, make(map[string]*zenoh.Storage)}
+	return &Yaks{z, yaksid, &Admin{adminWS, yaksid}}, nil
 }
 
 // Login establishes a session with the Yaks instance reachable via provided Zenoh locator.
@@ -67,4 +70,9 @@ func (y *Yaks) Logout() error {
 // All relative Selector or Path used with this Workspace will be relative to this path.
 func (y *Yaks) Workspace(path *Path) *Workspace {
 	return &Workspace{path, y.zenoh, make(map[string]*zenoh.Storage)}
+}
+
+// Admin returns the admin interface
+func (y *Yaks) Admin() *Admin {
+	return y.admin
 }
