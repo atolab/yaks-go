@@ -3,6 +3,8 @@ package yaks
 
 import (
 	"github.com/atolab/zenoh-go"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Yaks is Yaks
@@ -25,6 +27,8 @@ func (e *YError) Error() string {
 	return e.msg
 }
 
+var logger = log.WithFields(log.Fields{" pkg": "yaks"})
+
 func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 	props := z.Info()
 	yaksid, ok := props["peer_pid"]
@@ -40,6 +44,7 @@ func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 // The locator must have the format: tcp/<ip>:<port>.
 // Properties are unused in this version (can be nil).
 func Login(locator string, properties Properties) (*Yaks, error) {
+	logger.WithField("locator", locator).Debug("Connecting to Yaks via Zenoh")
 	z, e := zenoh.ZOpen(locator)
 	if e != nil {
 		return nil, &YError{"Login failed to " + locator, e}
@@ -51,6 +56,10 @@ func Login(locator string, properties Properties) (*Yaks, error) {
 // and using the specified user name and password.
 // The locator must have the format: tcp/<ip>:<port>.
 func LoginWUP(locator string, username string, password string) (*Yaks, error) {
+	logger.WithFields(log.Fields{
+		"locator": locator,
+		"uname":   username,
+	}).Debug("Connecting to Yaks via Zenoh")
 	z, e := zenoh.ZOpenWUP(locator, username, password)
 	if e != nil {
 		return nil, &YError{"Login failed to " + locator, e}

@@ -1,11 +1,11 @@
 package yaks
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/atolab/zenoh-go"
+	log "github.com/sirupsen/logrus"
 )
 
 // Workspace represents a workspace to operate on Yaks.
@@ -17,6 +17,10 @@ type Workspace struct {
 
 // Put a path/value into Yaks.
 func (w *Workspace) Put(path *Path, value Value) error {
+	logger.WithFields(log.Fields{
+		"path":  path,
+		"value": value,
+	}).Debug("Put")
 	p := w.toAbsolutePath(path)
 	if e := w.zenoh.WriteDataWO(p.ToString(), value.Encode(), value.Encoding(), PUT); e != nil {
 		return &YError{"Put on " + p.ToString() + " failed", e}
@@ -26,6 +30,10 @@ func (w *Workspace) Put(path *Path, value Value) error {
 
 // Update a path/value into Yaks.
 func (w *Workspace) Update(path *Path, value Value) error {
+	logger.WithFields(log.Fields{
+		"path":  path,
+		"value": value,
+	}).Debug("Update")
 	p := w.toAbsolutePath(path)
 	if e := w.zenoh.WriteDataWO(p.ToString(), value.Encode(), value.Encoding(), UPDATE); e != nil {
 		return &YError{"Put on " + path.ToString() + " failed", e}
@@ -35,6 +43,7 @@ func (w *Workspace) Update(path *Path, value Value) error {
 
 // Remove a path/value from Yaks.
 func (w *Workspace) Remove(path *Path) error {
+	logger.WithField("path", path).Debug("Remove")
 	p := w.toAbsolutePath(path)
 	if e := w.zenoh.WriteDataWO(p.ToString(), nil, 0, REMOVE); e != nil {
 		return &YError{"Put on " + path.ToString() + " failed", e}
@@ -45,6 +54,9 @@ func (w *Workspace) Remove(path *Path) error {
 // Get a selection of path/value from Yaks.
 func (w *Workspace) Get(selector *Selector) []PathValue {
 	s := w.toAbsoluteSelector(selector)
+	logger := logger.WithField("selector", s)
+	logger.Debug("Get")
+
 	results := make([]PathValue, 0)
 	queryFinished := false
 
@@ -56,31 +68,43 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 		case zenoh.ZStorageData:
 			path, err := NewPath(reply.RName())
 			if err != nil {
-				fmt.Printf("INTERNAL ERROR: Get on %s received reply for an invalid path: %s", s.ToString(), reply.RName())
+				logger.WithField("reply path", reply.RName()).
+					Warn("Get received reply for an invalid path")
 				return
 			}
 			data := reply.Data()
 			info := reply.Info()
 			encoding := info.Encoding()
-			fmt.Printf("Get on %s => Z_STORAGE_DATA %s : %d bytes - encoding: %d\n",
-				s.ToString(), path.ToString(), len(data), encoding)
+			logger.WithFields(log.Fields{
+				"reply path": reply.RName(),
+				"len(data)":  len(data),
+				"encoding":   encoding,
+			}).Trace("Get => Z_STORAGE_DATA")
+
 			decoder, ok := valueDecoders[encoding]
 			if !ok {
-				fmt.Printf("Get on %s: no decoder for encoding %d of reply %s", s.ToString(), encoding, reply.RName())
+				logger.WithFields(log.Fields{
+					"reply path": reply.RName(),
+					"encoding":   encoding,
+				}).Warn("Get : no Decoder found for reply")
 				return
 			}
 			value, err := decoder(data)
 			if err != nil {
-				fmt.Printf("Get on %s: error decoding reply %s : %s", s.ToString(), reply.RName(), err.Error())
+				logger.WithFields(log.Fields{
+					"reply path": reply.RName(),
+					"encoding":   encoding,
+					"error":      err,
+				}).Warn("Get : error decoding reply")
 				return
 			}
 			results = append(results, PathValue{path, value})
 
 		case zenoh.ZStorageFinal:
-			fmt.Printf("Get on %s => Z_STORAGE_FINAL\n", s.ToString())
+			logger.Trace("Get => Z_STORAGE_FINAL")
 
 		case zenoh.ZReplyFinal:
-			fmt.Printf("Get on %s => Z_REPLY_FINAL => %d values received\n", s.ToString(), len(results))
+			logger.WithField("nb replies", len(results)).Trace("Get => Z_REPLY_FINAL")
 			queryFinished = true
 			mu.Lock()
 			defer mu.Unlock()
@@ -101,25 +125,33 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 // Subscribe subscribes to a selection of path/value from Yaks.
 func (w *Workspace) Subscribe(selector *Selector, listener Listener) (*SubscriptionID, error) {
 	s := w.toAbsoluteSelector(selector)
-	fmt.Printf("subscribe on %s\n", s.ToString())
+	logger := logger.WithField("selector", s)
+	logger.Debug("Subscribe")
 
 	zListener := func(rid string, data []byte, info *zenoh.DataInfo) {
 		var changes = make([]Change, 1)
 		var err error
 		changes[0].path, err = NewPath(rid)
 		if err != nil {
-			fmt.Printf("ERROR: subscribe on %s received a notification for an invalid path: %s\n", s.ToString(), rid)
+			logger.WithField("notif path", rid).Warn("Subscribe received a notification for an invalid path")
 			return
 		}
 		encoding := info.Encoding()
 		decoder, ok := valueDecoders[encoding]
 		if !ok {
-			fmt.Printf("WARNING: subscribe on %s received a notification for %s with encoding %d but no Decoder found", s.ToString(), rid, encoding)
+			logger.WithFields(log.Fields{
+				"notif path": rid,
+				"encoding":   encoding,
+			}).Warn("Subscribe received a notification with an encoding, but no Decoder found for it")
 			return
 		}
 		changes[0].value, err = decoder(data)
 		if err != nil {
-			fmt.Printf("WARNING: subscribe on %s: error decoding change for %s : %s", s.ToString(), rid, err.Error())
+			logger.WithFields(log.Fields{
+				"notif path": rid,
+				"encoding":   encoding,
+				"error":      err,
+			}).Warn("Subscribe received a notification, but Decoder failed to decode")
 			return
 		}
 
@@ -153,20 +185,31 @@ var evals = make(map[Path]*zenoh.Storage)
 // RegisterEval registers an evaluation function with a Path
 func (w *Workspace) RegisterEval(path *Path, eval Eval) error {
 	p := w.toAbsolutePath(path)
+	logger := logger.WithField("path", p)
+	logger.Debug("RegisterEval")
 
 	zListener := func(rname string, data []byte, info *zenoh.DataInfo) {
-		fmt.Printf("Registered eval on %s received a publication on %s. Ignoer it!\n", p.ToString(), rname)
+		logger.WithField("pub path", rname).Debug("Registered eval received a publication. Ignore it!")
 	}
 
 	zQueryHandler := func(rname string, predicate string, repliesSender *zenoh.RepliesSender) {
-		fmt.Printf("Registered eval on %s handling query %s?%s\n", p.ToString(), rname, predicate)
+		logger.WithFields(log.Fields{
+			"rname":     rname,
+			"predicate": predicate,
+		}).Debug("Registered eval handling query")
 		s, err := NewSelector(rname + "?" + predicate)
 		if err != nil {
-			fmt.Printf("ERROR: Registered eval on %s received query for an invalid selector: %s?%s\n", p.ToString(), rname, predicate)
+			logger.WithField("selector", s).Warn("Registered eval received query for an invalid selector")
+			return
 		}
 
 		evalRoutine := func() {
 			v := eval(path, predicateToProperties(s.Properties()))
+			logger.WithFields(log.Fields{
+				"rname":     rname,
+				"predicate": predicate,
+				"value":     v,
+			}).Debug("Registered eval handling query returns")
 			replies := make([]zenoh.Resource, 1)
 			replies[0].RName = path.ToString()
 			replies[0].Data = v.Encode()
@@ -201,6 +244,9 @@ func (w *Workspace) UnregisterEval(path *Path) error {
 // Eval requests the evaluation of registered evals whose registration path matches the given selector
 func (w *Workspace) Eval(selector *Selector) []PathValue {
 	s := w.toAbsoluteSelector(selector)
+	logger := logger.WithField("selector", s)
+	logger.Debug("Eval")
+
 	results := make([]PathValue, 0)
 	queryFinished := false
 
@@ -212,31 +258,43 @@ func (w *Workspace) Eval(selector *Selector) []PathValue {
 		case zenoh.ZStorageData:
 			path, err := NewPath(reply.RName())
 			if err != nil {
-				fmt.Printf("INTERNAL ERROR: Eval on %s received reply for an invalid path: %s", s.ToString(), reply.RName())
+				logger.WithField("reply path", reply.RName()).
+					Warn("Eval received reply for an invalid path")
 				return
 			}
 			data := reply.Data()
 			info := reply.Info()
 			encoding := info.Encoding()
-			fmt.Printf("Eval on %s => Z_STORAGE_DATA %s : %d bytes - encoding: %d\n",
-				s.ToString(), path.ToString(), len(data), encoding)
+			logger.WithFields(log.Fields{
+				"reply path": reply.RName(),
+				"len(data)":  len(data),
+				"encoding":   encoding,
+			}).Trace("Eval => Z_STORAGE_DATA")
+
 			decoder, ok := valueDecoders[encoding]
 			if !ok {
-				fmt.Printf("Eval on %s: no decoder for encoding %d of reply %s", s.ToString(), encoding, reply.RName())
+				logger.WithFields(log.Fields{
+					"reply path": reply.RName(),
+					"encoding":   encoding,
+				}).Warn("Eval : no Decoder found for reply")
 				return
 			}
 			value, err := decoder(data)
 			if err != nil {
-				fmt.Printf("Eval on %s: error decoding reply %s : %s", s.ToString(), reply.RName(), err.Error())
+				logger.WithFields(log.Fields{
+					"reply path": reply.RName(),
+					"encoding":   encoding,
+					"error":      err,
+				}).Warn("Eval : error decoding reply")
 				return
 			}
 			results = append(results, PathValue{path, value})
 
 		case zenoh.ZStorageFinal:
-			fmt.Printf("Eval on %s => Z_STORAGE_FINAL\n", s.ToString())
+			logger.Trace("Eval => Z_STORAGE_FINAL")
 
 		case zenoh.ZReplyFinal:
-			fmt.Printf("Eval on %s => Z_REPLY_FINAL => %d values received\n", s.ToString(), len(results))
+			logger.WithField("nb replies", len(results)).Trace("Eval => Z_REPLY_FINAL")
 			queryFinished = true
 			mu.Lock()
 			defer mu.Unlock()
