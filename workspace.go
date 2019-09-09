@@ -178,8 +178,6 @@ func (w *Workspace) Unsubscribe(subid *SubscriptionID) error {
 	return nil
 }
 
-const zenohEvalPrefix = "+"
-
 var evals = make(map[Path]*zenoh.Storage)
 
 // RegisterEval registers an evaluation function with a Path
@@ -220,7 +218,7 @@ func (w *Workspace) RegisterEval(path *Path, eval Eval) error {
 		go evalRoutine()
 	}
 
-	s, err := w.zenoh.DeclareStorage(zenohEvalPrefix+p.ToString(), zListener, zQueryHandler)
+	s, err := w.zenoh.DeclareStorage(p.ToString(), zListener, zQueryHandler)
 	if err != nil {
 		return &YError{"RegisterEval on " + p.ToString() + " failed", err}
 	}
@@ -239,77 +237,6 @@ func (w *Workspace) UnregisterEval(path *Path) error {
 		}
 	}
 	return nil
-}
-
-// Eval requests the evaluation of registered evals whose registration path matches the given selector
-func (w *Workspace) Eval(selector *Selector) []PathValue {
-	s := w.toAbsoluteSelector(selector)
-	logger := logger.WithField("selector", s)
-	logger.Debug("Eval")
-
-	results := make([]PathValue, 0)
-	queryFinished := false
-
-	mu := new(sync.Mutex)
-	cond := sync.NewCond(mu)
-
-	replyCb := func(reply *zenoh.ReplyValue) {
-		switch reply.Kind() {
-		case zenoh.ZStorageData:
-			path, err := NewPath(reply.RName())
-			if err != nil {
-				logger.WithField("reply path", reply.RName()).
-					Warn("Eval received reply for an invalid path")
-				return
-			}
-			data := reply.Data()
-			info := reply.Info()
-			encoding := info.Encoding()
-			logger.WithFields(log.Fields{
-				"reply path": reply.RName(),
-				"len(data)":  len(data),
-				"encoding":   encoding,
-			}).Trace("Eval => Z_STORAGE_DATA")
-
-			decoder, ok := valueDecoders[encoding]
-			if !ok {
-				logger.WithFields(log.Fields{
-					"reply path": reply.RName(),
-					"encoding":   encoding,
-				}).Warn("Eval : no Decoder found for reply")
-				return
-			}
-			value, err := decoder(data)
-			if err != nil {
-				logger.WithFields(log.Fields{
-					"reply path": reply.RName(),
-					"encoding":   encoding,
-					"error":      err,
-				}).Warn("Eval : error decoding reply")
-				return
-			}
-			results = append(results, PathValue{path, value})
-
-		case zenoh.ZStorageFinal:
-			logger.Trace("Eval => Z_STORAGE_FINAL")
-
-		case zenoh.ZReplyFinal:
-			logger.WithField("nb replies", len(results)).Trace("Eval => Z_REPLY_FINAL")
-			queryFinished = true
-			mu.Lock()
-			defer mu.Unlock()
-			cond.Signal()
-		}
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	w.zenoh.Query(zenohEvalPrefix+s.Path(), s.OptionalPart(), replyCb)
-	for !queryFinished {
-		cond.Wait()
-	}
-
-	return results
 }
 
 func (w *Workspace) toAbsolutePath(p *Path) *Path {
