@@ -12,7 +12,7 @@ import (
 type Workspace struct {
 	path  *Path
 	zenoh *zenoh.Zenoh
-	evals map[string]*zenoh.Storage
+	evals map[Path]*zenoh.Eval
 }
 
 // Put a path/value into Yaks.
@@ -66,6 +66,7 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 	replyCb := func(reply *zenoh.ReplyValue) {
 		switch reply.Kind() {
 		case zenoh.ZStorageData:
+		case zenoh.ZEvalData:
 			path, err := NewPath(reply.RName())
 			if err != nil {
 				logger.WithField("reply path", reply.RName()).
@@ -75,11 +76,19 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 			data := reply.Data()
 			info := reply.Info()
 			encoding := info.Encoding()
-			logger.WithFields(log.Fields{
-				"reply path": reply.RName(),
-				"len(data)":  len(data),
-				"encoding":   encoding,
-			}).Trace("Get => Z_STORAGE_DATA")
+			if reply.Kind() == zenoh.ZStorageData {
+				logger.WithFields(log.Fields{
+					"reply path": reply.RName(),
+					"len(data)":  len(data),
+					"encoding":   encoding,
+				}).Trace("Get => Z_STORAGE_DATA")
+			} else {
+				logger.WithFields(log.Fields{
+					"reply path": reply.RName(),
+					"len(data)":  len(data),
+					"encoding":   encoding,
+				}).Trace("Get => Z_EVAL_DATA")
+			}
 
 			decoder, ok := valueDecoders[encoding]
 			if !ok {
@@ -102,6 +111,9 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 
 		case zenoh.ZStorageFinal:
 			logger.Trace("Get => Z_STORAGE_FINAL")
+
+		case zenoh.ZEvalFinal:
+			logger.Trace("Get => Z_EVAL_FINAL")
 
 		case zenoh.ZReplyFinal:
 			logger.WithField("nb replies", len(results)).Trace("Get => Z_REPLY_FINAL")
@@ -178,17 +190,11 @@ func (w *Workspace) Unsubscribe(subid *SubscriptionID) error {
 	return nil
 }
 
-var evals = make(map[Path]*zenoh.Storage)
-
 // RegisterEval registers an evaluation function with a Path
 func (w *Workspace) RegisterEval(path *Path, eval Eval) error {
 	p := w.toAbsolutePath(path)
 	logger := logger.WithField("path", p)
 	logger.Debug("RegisterEval")
-
-	zListener := func(rname string, data []byte, info *zenoh.DataInfo) {
-		logger.WithField("pub path", rname).Debug("Registered eval received a publication. Ignore it!")
-	}
 
 	zQueryHandler := func(rname string, predicate string, repliesSender *zenoh.RepliesSender) {
 		logger.WithFields(log.Fields{
@@ -218,20 +224,20 @@ func (w *Workspace) RegisterEval(path *Path, eval Eval) error {
 		go evalRoutine()
 	}
 
-	s, err := w.zenoh.DeclareStorage(p.ToString(), zListener, zQueryHandler)
+	e, err := w.zenoh.DeclareEval(p.ToString(), zQueryHandler)
 	if err != nil {
 		return &YError{"RegisterEval on " + p.ToString() + " failed", err}
 	}
-	evals[*p] = s
+	w.evals[*p] = e
 	return nil
 }
 
 // UnregisterEval requests the evaluation of registered evals whose registration path matches the given selector
 func (w *Workspace) UnregisterEval(path *Path) error {
-	s, ok := evals[*path]
+	e, ok := w.evals[*path]
 	if ok {
-		delete(evals, *path)
-		err := w.zenoh.UndeclareStorage(s)
+		delete(w.evals, *path)
+		err := w.zenoh.UndeclareEval(e)
 		if err != nil {
 			return &YError{"UnregisterEval on " + path.ToString() + " failed", err}
 		}

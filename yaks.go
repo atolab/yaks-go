@@ -36,7 +36,7 @@ func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 		return nil, &YError{"Failed to retrieve YaksId from Zenoh info", nil}
 	}
 	adminPath, _ := NewPath("/@")
-	adminWS := &Workspace{adminPath, z, make(map[string]*zenoh.Storage)}
+	adminWS := &Workspace{adminPath, z, make(map[Path]*zenoh.Eval)}
 	return &Yaks{z, yaksid, &Admin{adminWS, yaksid}}, nil
 }
 
@@ -78,7 +78,7 @@ func (y *Yaks) Logout() error {
 // Workspace creates a Workspace using the provided path.
 // All relative Selector or Path used with this Workspace will be relative to this path.
 func (y *Yaks) Workspace(path *Path) *Workspace {
-	return &Workspace{path, y.zenoh, make(map[string]*zenoh.Storage)}
+	return &Workspace{path, y.zenoh, make(map[Path]*zenoh.Eval)}
 }
 
 // Admin returns the admin interface
