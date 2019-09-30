@@ -272,6 +272,7 @@ func init() {
 	RegisterValueDecoder(RAW, rawDecoder)
 	RegisterValueDecoder(STRING, stringDecoder)
 	RegisterValueDecoder(PROPERTIES, propertiesDecoder)
+	RegisterValueDecoder(JSON, stringDecoder)
 }
 
 ////////////////
