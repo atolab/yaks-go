@@ -26,16 +26,16 @@ func main() {
 
 	path := "/test/thr"
 
-	chars := make([]byte, length)
-	for i := range chars {
-		chars[i] = 'X'
+	data := make([]byte, length)
+	for i := 0; i < length; i++ {
+		data[i] = byte(i % 10)
 	}
 
 	p, err := yaks.NewPath(path)
 	if err != nil {
 		panic(err.Error())
 	}
-	v := yaks.NewStringValue(string(chars))
+	v := yaks.NewRawValue(data)
 
 	fmt.Println("Login to " + locator + "...")
 	y, err := yaks.Login(locator, nil)
@@ -47,7 +47,7 @@ func main() {
 	root, _ := yaks.NewPath("/")
 	w := y.Workspace(root)
 
-	fmt.Printf("Put on %s : %db\n", p.ToString(), len(v.ToString()))
+	fmt.Printf("Put on %s : %db\n", p.ToString(), len(data))
 
 	for {
 		err = w.Put(p, v)
