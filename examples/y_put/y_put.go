@@ -30,7 +30,7 @@ func main() {
 	v := yaks.NewStringValue(value)
 
 	fmt.Println("Login to " + locator + "...")
-	y, err := yaks.Login("tcp/127.0.0.1:7447", nil)
+	y, err := yaks.Login(locator, nil)
 	if err != nil {
 		panic(err.Error())
 	}
