@@ -63,7 +63,7 @@ func (p *Path) IsRelative() bool {
 
 // AddPrefix returns a new Path made from the concatenation of the prefix and this path.
 func (p *Path) AddPrefix(prefix *Path) *Path {
-	result, _ := NewPath(prefix.path + p.path)
+	result, _ := NewPath(prefix.path + "/" + p.path)
 	return result
 }
 
