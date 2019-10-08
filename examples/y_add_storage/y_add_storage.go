@@ -18,9 +18,9 @@ func main() {
 		selector = os.Args[2]
 	}
 
-	s, err := yaks.NewSelector(selector)
-	if err != nil {
-		panic(err.Error())
+	storageID := "Demo"
+	if len(os.Args) > 3 {
+		storageID = os.Args[3]
 	}
 
 	fmt.Println("Login to " + locator + "...")
@@ -29,14 +29,12 @@ func main() {
 		panic(err.Error())
 	}
 
-	fmt.Println("Use Workspace on '/'")
-	root, _ := yaks.NewPath("/")
-	w := y.Workspace(root)
+	admin := y.Admin()
 
-	fmt.Println("Get from " + s.ToString())
-	for _, pv := range w.Get(s) {
-		fmt.Println("  " + pv.Path().ToString() + " : " + pv.Value().ToString())
-	}
+	fmt.Println("Add storage " + storageID + " with selector " + selector)
+	p := make(map[string]string)
+	p["selector"] = selector
+	admin.AddStorage(storageID, p)
 
 	err = y.Logout()
 	if err != nil {

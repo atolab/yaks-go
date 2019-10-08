@@ -3,16 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/atolab/yaks-go"
 )
-
-func listener(changes []yaks.Change) {
-	for _, c := range changes {
-		fmt.Printf(" -> %s : %s\n", c.Path().ToString(), c.Value().ToString())
-	}
-}
 
 func main() {
 	locator := "tcp/127.0.0.1:7447"
@@ -20,7 +13,7 @@ func main() {
 		locator = os.Args[1]
 	}
 
-	selector := "/demo/**"
+	selector := "/demo/example/**"
 	if len(os.Args) > 2 {
 		selector = os.Args[2]
 	}
@@ -41,14 +34,36 @@ func main() {
 	w := y.Workspace(root)
 
 	fmt.Println("Subscribe on " + selector)
-	subid, err := w.Subscribe(s, listener)
+	subid, err := w.Subscribe(s,
+		func(changes []yaks.Change) {
+			for _, c := range changes {
+				switch c.Kind() {
+				case yaks.PUT:
+					fmt.Printf(">> [Subscription listener] Received PUT on '%s': '%s')\n", c.Path().ToString(), c.Value().ToString())
+				case yaks.UPDATE:
+					fmt.Printf(">> [Subscription listener] Received UPDATE on '%s': '%s')\n", c.Path().ToString(), c.Value().ToString())
+				case yaks.REMOVE:
+					fmt.Printf(">> [Subscription listener] Received REMOVE on '%s')\n", c.Path().ToString())
+				default:
+					fmt.Printf(">> [Subscription listener] Received unkown operation with kind '%d' on '%s')\n", c.Kind(), c.Path().ToString())
+				}
+			}
+		})
 	if err != nil {
 		panic(err.Error())
 	}
 
-	time.Sleep(60 * time.Second)
+	fmt.Println("Enter 'q' to quit...")
+	fmt.Println()
+	var b = make([]byte, 1)
+	for b[0] != 'q' {
+		os.Stdin.Read(b)
+	}
 
-	w.Unsubscribe(subid)
+	err = w.Unsubscribe(subid)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	err = y.Logout()
 	if err != nil {

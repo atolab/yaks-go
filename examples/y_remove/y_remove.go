@@ -13,12 +13,13 @@ func main() {
 		locator = os.Args[1]
 	}
 
-	selector := "/demo/example/**"
+	// If not specified as 2nd argument, use a relative path (to the workspace below): "yaks-go-put"
+	path := "yaks-go-put"
 	if len(os.Args) > 2 {
-		selector = os.Args[2]
+		path = os.Args[2]
 	}
 
-	s, err := yaks.NewSelector(selector)
+	p, err := yaks.NewPath(path)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -29,13 +30,14 @@ func main() {
 		panic(err.Error())
 	}
 
-	fmt.Println("Use Workspace on '/'")
-	root, _ := yaks.NewPath("/")
+	fmt.Println("Use Workspace on '/demo/example'")
+	root, _ := yaks.NewPath("/demo/example")
 	w := y.Workspace(root)
 
-	fmt.Println("Get from " + s.ToString())
-	for _, pv := range w.Get(s) {
-		fmt.Println("  " + pv.Path().ToString() + " : " + pv.Value().ToString())
+	fmt.Println("Remove " + p.ToString())
+	err = w.Remove(p)
+	if err != nil {
+		panic(err.Error())
 	}
 
 	err = y.Logout()
