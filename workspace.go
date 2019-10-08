@@ -65,8 +65,7 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 
 	replyCb := func(reply *zenoh.ReplyValue) {
 		switch reply.Kind() {
-		case zenoh.ZStorageData:
-		case zenoh.ZEvalData:
+		case zenoh.ZStorageData, zenoh.ZEvalData:
 			path, err := NewPath(reply.RName())
 			if err != nil {
 				logger.WithField("reply path", reply.RName()).
