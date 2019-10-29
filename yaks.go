@@ -7,6 +7,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// PropUser is the "user" property key
+const PropUser = "user"
+
+// PropPassword is the "password" property key
+const PropPassword = "password"
+
 // Yaks is Yaks
 type Yaks struct {
 	zenoh  *zenoh.Zenoh
@@ -31,36 +37,35 @@ var logger = log.WithFields(log.Fields{" pkg": "yaks"})
 
 func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 	props := z.Info()
-	yaksid, ok := props["peer_pid"]
+	pid, ok := props[zenoh.Z_INFO_PEER_PID_KEY]
 	if !ok {
 		return nil, &YError{"Failed to retrieve YaksId from Zenoh info", nil}
 	}
+	yaksid := string(pid)
 	adminPath, _ := NewPath("/@")
 	adminWS := &Workspace{adminPath, z, make(map[Path]*zenoh.Eval)}
 	return &Yaks{z, yaksid, &Admin{adminWS, yaksid}}, nil
 }
 
-// Login establishes a session with the Yaks instance reachable via provided Zenoh locator.
-// The locator must have the format: tcp/<ip>:<port>.
-// Properties are unused in this version (can be nil).
-func Login(locator string, properties Properties) (*Yaks, error) {
-	logger.WithField("locator", locator).Debug("Connecting to Yaks via Zenoh")
-	z, e := zenoh.ZOpen(locator)
-	if e != nil {
-		return nil, &YError{"Login failed to " + locator, e}
+func getZProps(properties Properties) map[int][]byte {
+	zprops := make(map[int][]byte)
+	user, ok := properties[PropUser]
+	if ok {
+		zprops[zenoh.Z_USER_KEY] = []byte(user)
 	}
-	return newYaks(z)
+	password, ok := properties[PropPassword]
+	if ok {
+		zprops[zenoh.Z_PASSWD_KEY] = []byte(password)
+	}
+	return zprops
 }
 
-// LoginWUP establishes a session with the Yaks instance reachable via provided Zenoh locator
-// and using the specified user name and password.
+// Login establishes a session with the Yaks instance reachable via provided Zenoh locator.
 // The locator must have the format: tcp/<ip>:<port>.
-func LoginWUP(locator string, username string, password string) (*Yaks, error) {
-	logger.WithFields(log.Fields{
-		"locator": locator,
-		"uname":   username,
-	}).Debug("Connecting to Yaks via Zenoh")
-	z, e := zenoh.ZOpenWUP(locator, username, password)
+// Properties contains the ones to be used for this session (e.g. "user", "password"...). It can be nil.
+func Login(locator string, properties Properties) (*Yaks, error) {
+	logger.WithField("locator", locator).Debug("Connecting to Yaks via Zenoh")
+	z, e := zenoh.ZOpen(locator, getZProps(properties))
 	if e != nil {
 		return nil, &YError{"Login failed to " + locator, e}
 	}
