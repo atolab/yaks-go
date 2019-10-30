@@ -2,6 +2,8 @@
 package yaks
 
 import (
+	"encoding/hex"
+
 	"github.com/atolab/zenoh-go"
 
 	log "github.com/sirupsen/logrus"
@@ -41,7 +43,7 @@ func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 	if !ok {
 		return nil, &YError{"Failed to retrieve YaksId from Zenoh info", nil}
 	}
-	yaksid := string(pid)
+	yaksid := hex.EncodeToString(pid)
 	adminPath, _ := NewPath("/@")
 	adminWS := &Workspace{adminPath, z, make(map[Path]*zenoh.Eval)}
 	return &Yaks{z, yaksid, &Admin{adminWS, yaksid}}, nil
