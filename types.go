@@ -9,6 +9,9 @@ import (
 	"github.com/atolab/zenoh-go"
 )
 
+// Timestamp is a Zenoh Timestamp
+type Timestamp = zenoh.Timestamp
+
 // Properties is a (string,string) map
 type Properties map[string]string
 
@@ -177,24 +180,30 @@ func (s *Selector) AddPrefix(prefix *Path) *Selector {
 	return newSelector(prefix.path+s.path, s.predicate, s.properties, s.fragment)
 }
 
-///////////////////
-//   PathValue   //
-///////////////////
+///////////////
+//   Entry   //
+///////////////
 
-// PathValue is a Patth + Value tuple
-type PathValue struct {
-	path  *Path
-	value Value
+// Entry is a Path + Value + Timestamp tuple
+type Entry struct {
+	path   *Path
+	value  Value
+	tstamp *Timestamp
 }
 
-// Path returns the path of the PathValue tuple
-func (pv *PathValue) Path() *Path {
-	return pv.path
+// Path returns the path of the Entry
+func (e *Entry) Path() *Path {
+	return e.path
 }
 
-// Value returns the value of the PathValue tuple
-func (pv *PathValue) Value() Value {
-	return pv.value
+// Value returns the value of the Entry
+func (e *Entry) Value() Value {
+	return e.value
+}
+
+// Timestamp returns the timestamp of the Entry
+func (e *Entry) Timestamp() *Timestamp {
+	return e.tstamp
 }
 
 ////////////////

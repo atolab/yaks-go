@@ -1,6 +1,7 @@
 package yaks
 
 import (
+	"sort"
 	"strings"
 	"sync"
 
@@ -51,13 +52,56 @@ func (w *Workspace) Remove(path *Path) error {
 	return nil
 }
 
+// entries: a list of Entry that can be sorted per Timestamp
+type entries []Entry
+
+func (e entries) Len() int {
+	return len(e)
+}
+
+func (e entries) Less(i, j int) bool {
+	return e[i].Timestamp().Before(e[j].Timestamp())
+}
+
+func (e entries) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+
+// asSortedSet returns a sorted copy of the entries list, removing duplicate (i.e. with same timestamp)
+func (e entries) asSortedSet() entries {
+	// sort
+	sort.Sort(e)
+	// remove duplicates
+	res := make([]Entry, 0)
+	var ts *Timestamp
+	for _, entry := range e {
+		if ts == nil || *entry.Timestamp() != *ts {
+			res = append(res, entry)
+			ts = entry.Timestamp()
+		}
+	}
+	return res
+}
+
+// isSelectorForSeries returns true if the selector implies time series within reply
+func isSelectorForSeries(selector *Selector) bool {
+	// search for starttime or stoptime property in selector
+	props := strings.Split(selector.Properties(), ";")
+	for _, p := range props {
+		if strings.HasPrefix(p, "starttime") || strings.HasPrefix(p, "stoptime") {
+			return true
+		}
+	}
+	return false
+}
+
 // Get a selection of path/value from Yaks.
-func (w *Workspace) Get(selector *Selector) []PathValue {
+func (w *Workspace) Get(selector *Selector) []Entry {
 	s := w.toAbsoluteSelector(selector)
 	logger := logger.WithField("selector", s)
 	logger.Debug("Get")
 
-	results := make([]PathValue, 0)
+	qresults := make(map[Path]entries)
 	queryFinished := false
 
 	mu := new(sync.Mutex)
@@ -75,6 +119,7 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 			data := reply.Data()
 			info := reply.Info()
 			encoding := info.Encoding()
+			ts := info.Tstamp()
 			if reply.Kind() == zenoh.ZStorageData {
 				logger.WithFields(log.Fields{
 					"reply path": reply.RName(),
@@ -106,7 +151,9 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 				}).Warn("Get : error decoding reply")
 				return
 			}
-			results = append(results, PathValue{path, value})
+			entry := Entry{path, value, &ts}
+			l, _ := qresults[*path]
+			qresults[*path] = append(l, entry)
 
 		case zenoh.ZStorageFinal:
 			logger.Trace("Get => Z_STORAGE_FINAL")
@@ -115,7 +162,7 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 			logger.Trace("Get => Z_EVAL_FINAL")
 
 		case zenoh.ZReplyFinal:
-			logger.WithField("nb replies", len(results)).Trace("Get => Z_REPLY_FINAL")
+			logger.WithField("nb replies", len(qresults)).Trace("Get => Z_REPLY_FINAL")
 			queryFinished = true
 			mu.Lock()
 			defer mu.Unlock()
@@ -130,6 +177,23 @@ func (w *Workspace) Get(selector *Selector) []PathValue {
 		cond.Wait()
 	}
 
+	results := make([]Entry, 0)
+	if isSelectorForSeries(selector) {
+		// return all entries
+		for _, entries := range qresults {
+			entries = entries.asSortedSet()
+			for _, e := range entries {
+				results = append(results, e)
+			}
+		}
+	} else {
+		// return only the latest entry for each path
+		for _, entries := range qresults {
+			entries = entries.asSortedSet()
+			e := entries[len(entries)-1]
+			results = append(results, e)
+		}
+	}
 	return results
 }
 
