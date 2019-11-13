@@ -65,11 +65,11 @@ func getZProps(properties Properties) map[int][]byte {
 // Login establishes a session with the Yaks instance reachable via provided Zenoh locator.
 // The locator must have the format: tcp/<ip>:<port>.
 // Properties contains the ones to be used for this session (e.g. "user", "password"...). It can be nil.
-func Login(locator string, properties Properties) (*Yaks, error) {
+func Login(locator *string, properties Properties) (*Yaks, error) {
 	logger.WithField("locator", locator).Debug("Connecting to Yaks via Zenoh")
 	z, e := zenoh.ZOpen(locator, getZProps(properties))
 	if e != nil {
-		return nil, &YError{"Login failed to " + locator, e}
+		return nil, &YError{"Login failed", e}
 	}
 	return newYaks(z)
 }

@@ -8,9 +8,9 @@ import (
 )
 
 func main() {
-	locator := "tcp/127.0.0.1:7447"
+	var locator *string
 	if len(os.Args) > 1 {
-		locator = os.Args[1]
+		locator = &os.Args[1]
 	}
 
 	// If not specified as 2nd argument, use a relative path (to the workspace below): "yaks-go-put"
@@ -24,7 +24,7 @@ func main() {
 		panic(err.Error())
 	}
 
-	fmt.Println("Login to " + locator + "...")
+	fmt.Println("Login to Yaks...")
 	y, err := yaks.Login(locator, nil)
 	if err != nil {
 		panic(err.Error())
