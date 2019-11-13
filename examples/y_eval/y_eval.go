@@ -26,7 +26,7 @@ func main() {
 
 	fmt.Println("Use Workspace on '/'")
 	root, _ := yaks.NewPath("/")
-	w := y.Workspace(root)
+	w := y.WorkspaceWithExecutor(root)
 
 	fmt.Println("Register eval " + p.ToString())
 	err = w.RegisterEval(p,

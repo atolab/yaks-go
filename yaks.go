@@ -45,7 +45,7 @@ func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 	}
 	yaksid := hex.EncodeToString(pid)
 	adminPath, _ := NewPath("/@")
-	adminWS := &Workspace{adminPath, z, make(map[Path]*zenoh.Eval)}
+	adminWS := &Workspace{adminPath, z, make(map[Path]*zenoh.Eval), false}
 	return &Yaks{z, yaksid, &Admin{adminWS, yaksid}}, nil
 }
 
@@ -84,8 +84,20 @@ func (y *Yaks) Logout() error {
 
 // Workspace creates a Workspace using the provided path.
 // All relative Selector or Path used with this Workspace will be relative to this path.
+// Notice that all subscription listeners and eval callbacks declared in this workspace will be
+// executed by the I/O subroutine. This implies that no long operations or other call to Yaks
+// shall be performed in those callbacks.
 func (y *Yaks) Workspace(path *Path) *Workspace {
-	return &Workspace{path, y.zenoh, make(map[Path]*zenoh.Eval)}
+	return &Workspace{path, y.zenoh, make(map[Path]*zenoh.Eval), false}
+}
+
+// WorkspaceWithExecutor creates a Workspace using the provided path.
+// All relative Selector or Path used with this Workspace will be relative to this path.
+// Notice that all subscription listeners and eval callbacks declared in this workspace will be
+// executed by their own subroutine. This is useful when listeners and/or callbacks need to perform
+// long operations or need to call other Yaks operations.
+func (y *Yaks) WorkspaceWithExecutor(path *Path) *Workspace {
+	return &Workspace{path, y.zenoh, make(map[Path]*zenoh.Eval), true}
 }
 
 // Admin returns the admin interface

@@ -11,9 +11,10 @@ import (
 
 // Workspace represents a workspace to operate on Yaks.
 type Workspace struct {
-	path  *Path
-	zenoh *zenoh.Zenoh
-	evals map[Path]*zenoh.Eval
+	path          *Path
+	zenoh         *zenoh.Zenoh
+	evals         map[Path]*zenoh.Eval
+	useSubroutine bool
 }
 
 // Put a path/value into Yaks.
@@ -234,7 +235,11 @@ func (w *Workspace) Subscribe(selector *Selector, listener Listener) (*Subscript
 		ts := info.Tstamp()
 		changes[0].time = ts.Time()
 
-		listener(changes)
+		if w.useSubroutine {
+			go listener(changes)
+		} else {
+			listener(changes)
+		}
 	}
 
 	sub, err := w.zenoh.DeclareSubscriber(s.Path(), zenoh.NewSubMode(zenoh.ZPushMode), zListener)
@@ -284,7 +289,11 @@ func (w *Workspace) RegisterEval(path *Path, eval Eval) error {
 			replies[0].Kind = PUT
 			repliesSender.SendReplies(replies)
 		}
-		go evalRoutine()
+		if w.useSubroutine {
+			go evalRoutine()
+		} else {
+			evalRoutine()
+		}
 	}
 
 	e, err := w.zenoh.DeclareEval(p.ToString(), zQueryHandler)
