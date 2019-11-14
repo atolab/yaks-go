@@ -8,15 +8,15 @@ import (
 )
 
 func main() {
-	var locator *string
+	// If not specified as 1st argument, use a relative path (to the workspace below): "yaks-go-put"
+	path := "yaks-go-put"
 	if len(os.Args) > 1 {
-		locator = &os.Args[1]
+		path = os.Args[1]
 	}
 
-	// If not specified as 2nd argument, use a relative path (to the workspace below): "yaks-go-put"
-	path := "yaks-go-put"
+	var locator *string
 	if len(os.Args) > 2 {
-		path = os.Args[2]
+		locator = &os.Args[2]
 	}
 
 	p, err := yaks.NewPath(path)

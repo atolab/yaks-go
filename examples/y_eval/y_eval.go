@@ -8,12 +8,17 @@ import (
 )
 
 func main() {
-	var locator *string
+	path := "/demo/example/yaks-go-eval"
 	if len(os.Args) > 1 {
-		locator = &os.Args[1]
+		path = os.Args[1]
 	}
 
-	p, err := yaks.NewPath("/demo/example/yaks-go-eval")
+	var locator *string
+	if len(os.Args) > 2 {
+		locator = &os.Args[2]
+	}
+
+	p, err := yaks.NewPath(path)
 	if err != nil {
 		panic(err.Error())
 	}

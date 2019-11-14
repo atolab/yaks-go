@@ -8,14 +8,14 @@ import (
 )
 
 func main() {
-	var locator *string
+	selector := "/demo/example/**"
 	if len(os.Args) > 1 {
-		locator = &os.Args[1]
+		selector = os.Args[1]
 	}
 
-	selector := "/demo/example/**"
+	var locator *string
 	if len(os.Args) > 2 {
-		selector = os.Args[2]
+		locator = &os.Args[2]
 	}
 
 	s, err := yaks.NewSelector(selector)

@@ -8,19 +8,19 @@ import (
 )
 
 func main() {
-	var locator *string
-	if len(os.Args) > 1 {
-		locator = &os.Args[1]
-	}
-
 	selector := "/demo/example/**"
-	if len(os.Args) > 2 {
-		selector = os.Args[2]
+	if len(os.Args) > 1 {
+		selector = os.Args[1]
 	}
 
 	storageID := "Demo"
+	if len(os.Args) > 2 {
+		storageID = os.Args[2]
+	}
+
+	var locator *string
 	if len(os.Args) > 3 {
-		storageID = os.Args[3]
+		locator = &os.Args[3]
 	}
 
 	fmt.Println("Login to Yaks...")
