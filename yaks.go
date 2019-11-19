@@ -39,7 +39,7 @@ var logger = log.WithFields(log.Fields{" pkg": "yaks"})
 
 func newYaks(z *zenoh.Zenoh) (*Yaks, error) {
 	props := z.Info()
-	pid, ok := props[zenoh.Z_INFO_PEER_PID_KEY]
+	pid, ok := props[zenoh.ZInfoPeerPidKey]
 	if !ok {
 		return nil, &YError{"Failed to retrieve YaksId from Zenoh info", nil}
 	}
