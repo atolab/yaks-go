@@ -45,7 +45,7 @@ func main() {
 				case yaks.REMOVE:
 					fmt.Printf(">> [Subscription listener] Received REMOVE on '%s')\n", c.Path().ToString())
 				default:
-					fmt.Printf(">> [Subscription listener] Received unkown operation with kind '%d' on '%s')\n", c.Kind(), c.Path().ToString())
+					fmt.Printf(">> [Subscription listener] Received unknown operation with kind '%d' on '%s')\n", c.Kind(), c.Path().ToString())
 				}
 			}
 		})

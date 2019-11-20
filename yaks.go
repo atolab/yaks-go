@@ -22,7 +22,7 @@ type Yaks struct {
 	admin  *Admin
 }
 
-// YError reports an error that occured in Yaks, possibly caused by an error in Zenoh.
+// YError reports an error that occurred in Yaks, possibly caused by an error in Zenoh.
 type YError struct {
 	msg   string
 	cause error
