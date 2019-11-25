@@ -128,13 +128,9 @@
 
    Publisher usage:
    ```bash
-   go run y_put_thr/y_put_thr.go [I|W]<payload-size> [locator]
+   go run y_put_thr/y_put_thr.go <payload-size> [locator]
    ```
    where the arguments are:
-   - **[I|W]** : the way to allocate the java.util.ByteBuffer payload that will be put into Yaks.  
-                 **I**: use a non-direct ByteBuffer (created via ByteBuffer.allocate())  
-                 **W**: use a wrapped ByteBuffer (created via ByteBuffer.wrap())  
-                 **unset**: by default use a direct ByteBuffer
    - **payload-size** : the size of the payload in bytes.  
    - **locator** : the locator of the Yaks service to connect.  
                    Default value: none, meaning the Yaks service is found via multicast.
