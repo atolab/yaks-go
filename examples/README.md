@@ -47,9 +47,9 @@
    ```
    where the optional arguments are:
    - **path** : the path used as a key for the value.  
-                Default value: `/demo/example/yaks-java-put` 
+                Default value: `/demo/example/yaks-go-put` 
    - **value** : the value (as a string).  
-                Default value: `"Put from Yaks Java!"` 
+                Default value: `"Put from Yaks Go!"` 
    - **locator** : the locator of the Yaks service to connect.  
                    Default value: none, meaning the Yaks service is found via multicast.
 
@@ -82,7 +82,7 @@
    ```
    where the optional arguments are:
    - **path** : the key to be removed.  
-                Default value: `/demo/example/yaks-java-put` 
+                Default value: `/demo/example/yaks-go-put` 
    - **locator** : the locator of the Yaks service to connect.  
                    Default value: none, meaning the Yaks service is found via multicast.
 
@@ -115,7 +115,7 @@
    ```
    where the optional arguments are:
    - **path** : the eval path.  
-                Default value: `/demo/example/yaks-java-eval` 
+                Default value: `/demo/example/yaks-go-eval` 
    - **locator** : the locator of the Yaks service to connect.  
                    Default value: none, meaning the Yaks service is found via multicast.
 

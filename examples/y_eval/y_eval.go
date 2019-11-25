@@ -38,9 +38,9 @@ func main() {
 		func(path *yaks.Path, props yaks.Properties) yaks.Value {
 			// In this Eval function, we choosed to get the name to be returned in the StringValue in 3 possible ways,
 			// depending the properties specified in the selector. For example, with the following selectors:
-			//   - "/demo/example/yaks-java-eval" : no properties are set, a default value is used for the name
-			//   - "/demo/example/yaks-java-eval?(name=Bob)" : "Bob" is used for the name
-			//   - "/demo/example/yaks-java-eval?(name=/demo/example/name)" :
+			//   - "/demo/example/yaks-go-eval" : no properties are set, a default value is used for the name
+			//   - "/demo/example/yaks-go-eval?(name=Bob)" : "Bob" is used for the name
+			//   - "/demo/example/yaks-go-eval?(name=/demo/example/name)" :
 			//     the Eval function does a GET on "/demo/example/name" an uses the 1st result for the name
 
 			fmt.Printf(">> Processing eval for path %s with properties: %s\n", path, props)
