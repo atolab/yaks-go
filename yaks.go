@@ -53,11 +53,11 @@ func getZProps(properties Properties) map[int][]byte {
 	zprops := make(map[int][]byte)
 	user, ok := properties[PropUser]
 	if ok {
-		zprops[zenoh.Z_USER_KEY] = []byte(user)
+		zprops[zenoh.ZUserKey] = []byte(user)
 	}
 	password, ok := properties[PropPassword]
 	if ok {
-		zprops[zenoh.Z_PASSWD_KEY] = []byte(password)
+		zprops[zenoh.ZPasswdKey] = []byte(password)
 	}
 	return zprops
 }
