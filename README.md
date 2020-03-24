@@ -1,5 +1,9 @@
-[![Documentation Status](https://readthedocs.org/projects/yaks-go/badge/?version=latest)](https://yaks-go.readthedocs.io/en/latest/?badge=latest)
-[![GoReport Status](https://goreportcard.com/badge/github.com/atolab/yaks-go)](https://goreportcard.com/report/github.com/atolab/yaks-go)
+The YAKS project has been merged into the **zenoh** project.
 
-# yaks-go
-The YAKS API binding for Go.
+**Retrieve all the YAKS features an more in the [Eclipse zenoh](http://zenoh.io) project!**
+
+  - zenoh service: https://github.com/eclipse-zenoh/zenoh
+  - Python API: https://github.com/eclipse-zenoh/zenoh-python
+  - Java API: https://github.com/eclipse-zenoh/zenoh-java
+  - Go API: https://github.com/eclipse-zenoh/zenoh-go
+  - C API: https://github.com/eclipse-zenoh/zenoh-c
